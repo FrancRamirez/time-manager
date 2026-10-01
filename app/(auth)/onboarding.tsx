@@ -24,7 +24,9 @@ export default function OnboardingScreen() {
         "/api/billing/confirm-onboarding",
         { method: "POST" }
       );
-      setUser((prev) => (prev ? { ...prev, ...updatedUser } : prev));
+      // El store de zustand no acepta funciones updater: se lee el usuario actual.
+      const current = useUserStore.getState().user;
+      setUser(current ? { ...current, ...updatedUser } : current);
       router.replace("/(tabs)/agenda");
     } finally {
       setLoading(false);

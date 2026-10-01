@@ -1,12 +1,15 @@
 import { ScrollView, View, Text, Switch, StyleSheet } from "react-native";
 import { AutonomySelector } from "@/components/AutonomySelector";
 import { BlockedHoursPicker } from "@/components/BlockedHoursPicker";
+import { Stepper } from "@/components/Stepper";
 import { useSettingsStore } from "@/store/settingsStore";
 
 export default function SettingsScreen() {
   const {
     settings,
     updateAutonomyLevel,
+    setBufferMinutes,
+    setDailyActionLimit,
     addBlockedHour,
     removeBlockedHour,
   } = useSettingsStore();
@@ -20,6 +23,22 @@ export default function SettingsScreen() {
         />
       </Section>
 
+      {settings.autonomyLevel === "autopilot" && (
+        <Section title="Límite diario de acciones automáticas">
+          <Text style={styles.hint}>
+            Al llegar al límite, el asistente vuelve a pedirte confirmación hasta el día siguiente.
+            Cancelar eventos siempre te pide confirmación.
+          </Text>
+          <Stepper
+            value={settings.dailyActionLimit}
+            onChange={setDailyActionLimit}
+            min={5}
+            max={200}
+            step={5}
+          />
+        </Section>
+      )}
+
       <Section title="Notificaciones">
         <ToggleRow label="Sonido" value={settings.notificationChannels.sound} />
         <ToggleRow label="Vibración" value={settings.notificationChannels.vibration} />
@@ -30,20 +49,26 @@ export default function SettingsScreen() {
       </Section>
 
       <Section title="Buffer entre citas">
-        <Text style={styles.value}>{settings.bufferMinutes} minutos</Text>
+        <Text style={styles.hint}>
+          Tiempo libre mínimo que el asistente deja antes y después de cada evento.
+        </Text>
+        <Stepper
+          value={settings.bufferMinutes}
+          onChange={setBufferMinutes}
+          min={0}
+          max={120}
+          step={5}
+          suffix=" min"
+        />
       </Section>
 
       <Section title="">
         <BlockedHoursPicker
           ranges={settings.blockedHours}
-          onAdd={() =>
-            addBlockedHour({
-              id: `local-${Date.now()}`,
-              dayOfWeek: 1,
-              startTime: "12:00",
-              endTime: "14:00",
-              label: "Almuerzo",
-            })
+          onAdd={(ranges) =>
+            ranges.forEach((r) =>
+              addBlockedHour({ ...r, id: `local-${Date.now()}-${r.dayOfWeek}-${r.startTime}` })
+            )
           }
           onRemove={removeBlockedHour}
         />
@@ -76,6 +101,7 @@ const styles = StyleSheet.create({
   section: { gap: 10 },
   sectionTitle: { color: "#F1F5F9", fontWeight: "700", fontSize: 16 },
   value: { color: "#E2E8F0", fontSize: 14 },
+  hint: { color: "#94A3B8", fontSize: 12 },
   toggleRow: {
     flexDirection: "row",
     justifyContent: "space-between",

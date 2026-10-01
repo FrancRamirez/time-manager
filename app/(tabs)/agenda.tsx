@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useFocusEffect } from "expo-router";
 import { View, Text, FlatList, StyleSheet, RefreshControl, Alert } from "react-native";
 import { EventCard } from "@/components/EventCard";
 import { useAgendaStore } from "@/store/agendaStore";
@@ -22,16 +23,25 @@ export default function AgendaScreen() {
     setSuggestions(nextSuggestions);
   }, [setEvents, setSuggestions]);
 
-  useEffect(() => {
-    loadData().catch(() => {
-      /* el estado vacío ya cubre el caso de error en esta versión inicial */
-    });
-  }, [loadData]);
+  // Se recarga cada vez que la pestaña recibe el foco: así aparecen los eventos
+  // que el asistente acaba de crear o mover.
+  useFocusEffect(
+    useCallback(() => {
+      loadData().catch(() => {
+        /* el estado vacío ya cubre el caso de error en esta versión inicial */
+      });
+    }, [loadData])
+  );
 
   async function handleRefresh() {
     setRefreshing(true);
-    await loadData();
-    setRefreshing(false);
+    try {
+      await loadData();
+    } catch {
+      /* se mantiene lo que había */
+    } finally {
+      setRefreshing(false);
+    }
   }
 
   async function handleSuggestion(eventId: string, accepted: boolean) {

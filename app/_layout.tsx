@@ -3,6 +3,7 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useUserStore } from "@/store/userStore";
+import { useSettingsStore } from "@/store/settingsStore";
 import { getAccessToken } from "@/services/secureStorage";
 
 SplashScreen.preventAutoHideAsync();
@@ -15,6 +16,7 @@ export default function RootLayout() {
     (async () => {
       // Chequeo simple de sesión existente al abrir la app.
       // El detalle del usuario se resuelve en index.tsx contra el backend.
+      await useSettingsStore.getState().hydrate();
       const token = await getAccessToken();
       if (!token) setUser(null);
       setLoading(false);

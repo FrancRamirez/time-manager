@@ -1,5 +1,6 @@
 import { apiFetch } from "./client";
 import type { ChatMessage } from "@/types";
+import { useSettingsStore } from "@/store/settingsStore";
 
 export interface PendingAction {
   /** Id de la fila en pending_actions; se usa para confirmar o rechazar. */
@@ -13,9 +14,28 @@ export interface PendingAction {
 interface SendMessageResponse {
   reply: ChatMessage;
   pendingAction?: PendingAction;
+  /** Acción aplicada de inmediato (modo Piloto Automático). */
+  executedAction?: { type: PendingAction["type"]; description: string };
 }
 
 const MAX_HISTORY = 10;
+
+/** Preferencias que el asistente debe respetar (el servidor las valida y las hace cumplir). */
+function assistantSettings() {
+  const { autonomyLevel, bufferMinutes, dailyActionLimit, blockedHours } =
+    useSettingsStore.getState().settings;
+  return {
+    autonomyLevel,
+    bufferMinutes,
+    dailyActionLimit,
+    blockedHours: blockedHours.map(({ dayOfWeek, startTime, endTime, label }) => ({
+      dayOfWeek,
+      startTime,
+      endTime,
+      label,
+    })),
+  };
+}
 
 /**
  * Envía el mensaje al backend, que lo reenvía a Gemini con function calling.
@@ -32,6 +52,7 @@ export function sendChatMessage(message: string, history: ChatMessage[] = []) {
         .slice(-MAX_HISTORY)
         .map(({ role, content }) => ({ role, content })),
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      settings: assistantSettings(),
     },
   });
 }
