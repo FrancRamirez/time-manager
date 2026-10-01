@@ -10,7 +10,11 @@ import {
   Platform,
   Alert,
 } from "react-native";
-import { sendChatMessage, confirmPendingAction } from "@/api/gemini";
+import {
+  sendChatMessage,
+  confirmPendingAction,
+  type PendingAction,
+} from "@/api/gemini";
 import type { ChatMessage } from "@/types";
 
 export default function ChatScreen() {
@@ -18,10 +22,35 @@ export default function ChatScreen() {
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
 
+  function pushAssistant(content: string, prefix = "assistant") {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: `${prefix}-${Date.now()}`,
+        role: "assistant",
+        content,
+        createdAt: new Date().toISOString(),
+      },
+    ]);
+  }
+
+  async function resolveAction(action: PendingAction, approve: boolean) {
+    try {
+      await confirmPendingAction(action.id, approve);
+      pushAssistant(approve ? "Listo, ya lo hice en tu calendario." : "Entendido, no hice cambios.");
+    } catch {
+      pushAssistant(
+        "No pude completar la acción. Puede que haya vencido; pídemela de nuevo.",
+        "error"
+      );
+    }
+  }
+
   async function handleSend() {
     const trimmed = input.trim();
     if (!trimmed || sending) return;
 
+    const history = messages;
     const userMessage: ChatMessage = {
       id: `local-${Date.now()}`,
       role: "user",
@@ -33,30 +62,19 @@ export default function ChatScreen() {
     setSending(true);
 
     try {
-      const { reply, pendingAction } = await sendChatMessage(trimmed);
+      const { reply, pendingAction } = await sendChatMessage(trimmed, history);
       setMessages((prev) => [...prev, reply]);
 
       if (pendingAction) {
-        // Confirmación crítica requerida para acciones destructivas
-        // (cancelar/borrar), según la regla de negocio de la spec.
+        // Toda acción que modifica el calendario requiere confirmación
+        // explícita (regla de negocio de la spec).
         Alert.alert("Confirmar acción", pendingAction.description, [
-          { text: "Cancelar", style: "cancel" },
-          {
-            text: "Confirmar",
-            onPress: () => confirmPendingAction(pendingAction.type, true),
-          },
-        ]);
+          { text: "Cancelar", style: "cancel", onPress: () => resolveAction(pendingAction, false) },
+          { text: "Confirmar", onPress: () => resolveAction(pendingAction, true) },
+        ], { cancelable: false });
       }
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `error-${Date.now()}`,
-          role: "assistant",
-          content: "No pude procesar eso ahora. Probá de nuevo en un momento.",
-          createdAt: new Date().toISOString(),
-        },
-      ]);
+      pushAssistant("No pude procesar eso ahora. Intenta de nuevo en un momento.", "error");
     } finally {
       setSending(false);
     }
@@ -78,7 +96,11 @@ export default function ChatScreen() {
               item.role === "user" ? styles.bubbleUser : styles.bubbleAssistant,
             ]}
           >
-            <Text style={styles.bubbleText}>{item.content}</Text>
+            <Text
+              style={item.role === "user" ? styles.bubbleText : styles.bubbleTextAssistant}
+            >
+              {item.content}
+            </Text>
           </View>
         )}
         ListEmptyComponent={
@@ -96,6 +118,7 @@ export default function ChatScreen() {
           placeholder="Escribí un mensaje..."
           placeholderTextColor="#64748B"
           onSubmitEditing={handleSend}
+          editable={!sending}
         />
         <Pressable style={styles.sendButton} onPress={handleSend} disabled={sending}>
           <Text style={styles.sendButtonText}>Enviar</Text>
@@ -113,6 +136,7 @@ const styles = StyleSheet.create({
   bubbleUser: { backgroundColor: "#38BDF8", alignSelf: "flex-end" },
   bubbleAssistant: { backgroundColor: "#1E293B", alignSelf: "flex-start" },
   bubbleText: { color: "#0F172A", fontSize: 14 },
+  bubbleTextAssistant: { color: "#F1F5F9", fontSize: 14 },
   inputRow: {
     flexDirection: "row",
     padding: 12,
