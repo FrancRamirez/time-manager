@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "536143796599",
+    "project_id": "time-manager-43798",
+    "storage_bucket": "time-manager-43798.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:536143796599:android:3bc43d78950b969259a972",
+        "android_client_info": {
+          "package_name": "com.framirezdev.timemanager"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "536143796599-bg9d86tiavdlj7qpju90jtikklesd0ej.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.framirezdev.timemanager",
+            "certificate_hash": "d2df3d95634408e1465341d1f45ab2fee1a06dd6"
+          }
+        },
+        {
+          "client_id": "536143796599-ju9dt76jja9cbdop7h9ugmb9r2oft4a9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.framirezdev.timemanager",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "536143796599-albjregof5rluarhnv1gspjvn5vr6p5k.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCC5gjmOiw1v9qpKv7iX5_UJVPZR_Phmzk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "536143796599-8r0ipcqofnkna5sqm0gneqg27mid7fc4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
