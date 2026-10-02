@@ -5,6 +5,8 @@ import { StatusBar } from "expo-status-bar";
 import { useUserStore } from "@/store/userStore";
 import { useSettingsStore } from "@/store/settingsStore";
 import { getAccessToken } from "@/services/secureStorage";
+// Define la tarea en segundo plano en el scope global (debe cargarse al arrancar la app).
+import "@/services/backgroundTasks";
 
 SplashScreen.preventAutoHideAsync();
 

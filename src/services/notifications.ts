@@ -2,7 +2,16 @@ import messaging from "@react-native-firebase/messaging";
 import * as Notifications from "expo-notifications";
 import { apiFetch } from "@/api/client";
 
-const RESCHEDULE_CATEGORY = "RESCHEDULE_SUGGESTION";
+export const RESCHEDULE_CATEGORY = "RESCHEDULE_SUGGESTION";
+export const SUGGESTION_CHANNEL_ID = "suggestions";
+
+/** Canal de Android (obligatorio desde Android 8) para avisos de conflictos. */
+export async function ensureSuggestionChannel() {
+  await Notifications.setNotificationChannelAsync(SUGGESTION_CHANNEL_ID, {
+    name: "Sugerencias de agenda",
+    importance: Notifications.AndroidImportance.HIGH,
+  });
+}
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -17,16 +26,19 @@ Notifications.setNotificationHandler({
  * aparecen directo en la notificación de Android, sin abrir la app.
  */
 export async function registerNotificationCategories() {
+  await ensureSuggestionChannel();
+  // Los botones abren la app: con la app cerrada, es la única forma fiable de que
+  // el código que responde a la acción llegue a ejecutarse.
   await Notifications.setNotificationCategoryAsync(RESCHEDULE_CATEGORY, [
     {
       identifier: "ACCEPT",
       buttonTitle: "Aceptar cambio",
-      options: { opensAppToForeground: false },
+      options: { opensAppToForeground: true },
     },
     {
       identifier: "IGNORE",
       buttonTitle: "Ignorar",
-      options: { opensAppToForeground: false },
+      options: { opensAppToForeground: true },
     },
   ]);
 }

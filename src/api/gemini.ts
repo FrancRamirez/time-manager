@@ -1,6 +1,6 @@
 import { apiFetch } from "./client";
+import { assistantSettings, deviceTimeZone } from "./preferences";
 import type { ChatMessage } from "@/types";
-import { useSettingsStore } from "@/store/settingsStore";
 
 export interface PendingAction {
   /** Id de la fila en pending_actions; se usa para confirmar o rechazar. */
@@ -20,29 +20,19 @@ interface SendMessageResponse {
 
 const MAX_HISTORY = 10;
 
-/** Preferencias que el asistente debe respetar (el servidor las valida y las hace cumplir). */
-function assistantSettings() {
-  const { autonomyLevel, bufferMinutes, dailyActionLimit, blockedHours } =
-    useSettingsStore.getState().settings;
-  return {
-    autonomyLevel,
-    bufferMinutes,
-    dailyActionLimit,
-    blockedHours: blockedHours.map(({ dayOfWeek, startTime, endTime, label }) => ({
-      dayOfWeek,
-      startTime,
-      endTime,
-      label,
-    })),
-  };
-}
-
 /**
  * Envía el mensaje al backend, que lo reenvía a Gemini con function calling.
  * El servidor no guarda conversaciones (procesamiento efímero), así que la
  * app manda los últimos mensajes como contexto en cada request.
+ *
+ * `viaVoice` avisa que el texto viene del dictado y puede traer errores de
+ * transcripción: el asistente pregunta si algo clave no queda claro.
  */
-export function sendChatMessage(message: string, history: ChatMessage[] = []) {
+export function sendChatMessage(
+  message: string,
+  history: ChatMessage[] = [],
+  options: { viaVoice?: boolean } = {}
+) {
   return apiFetch<SendMessageResponse>("/api/ai/chat", {
     method: "POST",
     body: {
@@ -51,8 +41,9 @@ export function sendChatMessage(message: string, history: ChatMessage[] = []) {
         .filter((m) => !m.id.startsWith("error-"))
         .slice(-MAX_HISTORY)
         .map(({ role, content }) => ({ role, content })),
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      timeZone: deviceTimeZone(),
       settings: assistantSettings(),
+      viaVoice: options.viaVoice === true,
     },
   });
 }

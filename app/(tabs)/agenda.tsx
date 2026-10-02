@@ -2,11 +2,14 @@ import { useCallback, useState } from "react";
 import { useFocusEffect } from "expo-router";
 import { View, Text, FlatList, StyleSheet, RefreshControl, Alert } from "react-native";
 import { EventCard } from "@/components/EventCard";
+import { ApiError, apiErrorMessage } from "@/api/client";
 import { useAgendaStore } from "@/store/agendaStore";
 import {
   fetchUpcomingEvents,
   fetchPendingSuggestions,
   respondToSuggestion,
+  scanForConflicts,
+  type ScanResult,
 } from "@/api/calendar";
 
 export default function AgendaScreen() {
@@ -14,14 +17,33 @@ export default function AgendaScreen() {
     useAgendaStore();
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadData = useCallback(async () => {
-    const [nextEvents, nextSuggestions] = await Promise.all([
-      fetchUpcomingEvents(),
-      fetchPendingSuggestions(),
-    ]);
-    setEvents(nextEvents);
-    setSuggestions(nextSuggestions);
-  }, [setEvents, setSuggestions]);
+  const loadData = useCallback(
+    async (opts: { force?: boolean } = {}) => {
+      // Primero se analiza la agenda (detecta conflictos y genera sugerencias);
+      // si el análisis falla, igual se muestran los eventos.
+      let scan: ScanResult | null = null;
+      try {
+        scan = await scanForConflicts({ force: opts.force });
+      } catch {
+        /* se sigue con lo que ya hay guardado */
+      }
+
+      const [nextEvents, nextSuggestions] = await Promise.all([
+        fetchUpcomingEvents(),
+        fetchPendingSuggestions(),
+      ]);
+      setEvents(nextEvents);
+      setSuggestions(nextSuggestions);
+
+      if (scan && scan.applied.length > 0) {
+        Alert.alert(
+          "Piloto Automático",
+          scan.applied.map((a) => `• ${a.description}`).join("\n")
+        );
+      }
+    },
+    [setEvents, setSuggestions]
+  );
 
   // Se recarga cada vez que la pestaña recibe el foco: así aparecen los eventos
   // que el asistente acaba de crear o mover.
@@ -36,7 +58,7 @@ export default function AgendaScreen() {
   async function handleRefresh() {
     setRefreshing(true);
     try {
-      await loadData();
+      await loadData({ force: true });
     } catch {
       /* se mantiene lo que había */
     } finally {
@@ -48,8 +70,18 @@ export default function AgendaScreen() {
     try {
       await respondToSuggestion(eventId, accepted);
       removeSuggestion(eventId);
-    } catch {
-      Alert.alert("Error", "No se pudo procesar la sugerencia. Probá de nuevo.");
+      // Al aceptar, el evento cambió de horario: se recarga la agenda.
+      if (accepted) loadData().catch(() => {});
+    } catch (err) {
+      // 404: el evento ya no existe o la sugerencia ya se resolvió.
+      if (err instanceof ApiError && err.status === 404) {
+        removeSuggestion(eventId);
+        loadData().catch(() => {});
+      }
+      Alert.alert(
+        "No se pudo aplicar",
+        apiErrorMessage(err, "No se pudo procesar la sugerencia. Intenta de nuevo.")
+      );
     }
   }
 

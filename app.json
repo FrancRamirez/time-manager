@@ -35,7 +35,17 @@
         }
       ],
       "@react-native-firebase/app",
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Permite que Time Manager use el micrófono para dictar mensajes al asistente.",
+          "speechRecognitionPermission": "Permite que Time Manager use el reconocimiento de voz para transcribir lo que dictas.",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox"
+          ]
+        }
+      ]
     ],
     "extra": {
       "eas": {

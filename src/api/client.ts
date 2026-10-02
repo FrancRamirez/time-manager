@@ -15,6 +15,19 @@ export class ApiError extends Error {
   }
 }
 
+/** Extrae el texto de `{ "error": "..." }` que devuelve el backend. */
+export function apiErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof ApiError) {
+    try {
+      const parsed = JSON.parse(err.message) as { error?: unknown };
+      if (typeof parsed.error === "string" && parsed.error) return parsed.error;
+    } catch {
+      /* el cuerpo no era JSON */
+    }
+  }
+  return fallback;
+}
+
 interface RequestOptions extends Omit<RequestInit, "body"> {
   body?: unknown;
   auth?: boolean; // default true

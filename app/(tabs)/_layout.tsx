@@ -1,7 +1,10 @@
+import { useEffect } from "react";
 import { Image } from "react-native";
 import { Tabs } from "expo-router";
 import { useNotificationPermissions } from "@/hooks/useNotificationPermissions";
 import { useDeepLink } from "@/hooks/useDeepLink";
+import { useSuggestionNotificationActions } from "@/hooks/useSuggestionNotificationActions";
+import { registerBackgroundSync } from "@/services/backgroundTasks";
 
 // Íconos en blanco con transparencia: `tintColor` los pinta con el color activo/inactivo.
 const ICONS = {
@@ -25,6 +28,14 @@ export default function TabsLayout() {
   // entra al área autenticada de la app.
   useNotificationPermissions();
   useDeepLink();
+  useSuggestionNotificationActions();
+
+  // Análisis periódico de conflictos (cada ~15 min, aunque la app esté cerrada).
+  useEffect(() => {
+    registerBackgroundSync().catch((err) =>
+      console.warn("No se pudo registrar la sincronización en segundo plano", err)
+    );
+  }, []);
 
   return (
     <Tabs
