@@ -20,6 +20,8 @@ import {
   type PendingAction,
 } from "@/api/gemini";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
+import { handleDeviceAction } from "@/services/deviceActions";
+import { TypingIndicator } from "@/components/TypingIndicator";
 import type { ChatMessage } from "@/types";
 
 /**
@@ -41,6 +43,7 @@ export default function ChatScreen() {
   const [willCancel, setWillCancel] = useState(false);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pulse = useRef(new Animated.Value(1)).current;
+  const listRef = useRef<FlatList<ChatMessage>>(null);
 
   function pushAssistant(content: string, prefix = "assistant") {
     setMessages((prev) => [
@@ -93,10 +96,17 @@ export default function ChatScreen() {
     setSending(true);
 
     try {
-      const { reply, pendingAction } = await sendChatMessage(trimmed, history, {
+      const { reply, pendingAction, deviceAction } = await sendChatMessage(trimmed, history, {
         viaVoice: opts.viaVoice,
       });
       setMessages((prev) => [...prev, reply]);
+
+      if (deviceAction) {
+        // Alarmas y temporizadores los ejecuta la app en el reloj del teléfono.
+        handleDeviceAction(deviceAction, (result) =>
+          pushAssistant(result.message, result.ok ? "assistant" : "error")
+        );
+      }
 
       if (pendingAction) {
         // Toda acción que modifica el calendario requiere confirmación
@@ -195,7 +205,13 @@ export default function ChatScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <FlatList
+        ref={listRef}
         data={messages}
+        // Mantiene a la vista el último mensaje y el indicador "escribiendo".
+        onContentSizeChange={() => {
+          if (messages.length || sending) listRef.current?.scrollToEnd({ animated: true });
+        }}
+        ListFooterComponent={sending ? <TypingIndicator /> : null}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => (

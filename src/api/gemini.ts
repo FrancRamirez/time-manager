@@ -1,6 +1,27 @@
 import { apiFetch } from "./client";
 import { assistantSettings, deviceTimeZone } from "./preferences";
+import { registeredAlarms } from "@/services/deviceActions";
+import type { Day } from "@/services/clock";
 import type { ChatMessage } from "@/types";
+
+interface AlarmFields {
+  hour: number;
+  minute: number;
+  days: Day[];
+  label?: string;
+}
+
+/** Acción sobre el reloj del dispositivo: la ejecuta la app (el servidor no puede). */
+export type DeviceAction = (
+  | ({ kind: "alarm_set" } & AlarmFields)
+  | ({ kind: "alarm_cancel"; alarmId: string } & AlarmFields)
+  | { kind: "alarm_update"; alarmId: string; old: AlarmFields; new: AlarmFields }
+  | { kind: "timer_set"; seconds: number; label?: string }
+) & {
+  description: string;
+  /** true: pedir confirmación antes de ejecutar. false: ejecutar de inmediato. */
+  requiresConfirmation: boolean;
+};
 
 export interface PendingAction {
   /** Id de la fila en pending_actions; se usa para confirmar o rechazar. */
@@ -16,6 +37,7 @@ interface SendMessageResponse {
   pendingAction?: PendingAction;
   /** Acción aplicada de inmediato (modo Piloto Automático). */
   executedAction?: { type: PendingAction["type"]; description: string };
+  deviceAction?: DeviceAction;
 }
 
 const MAX_HISTORY = 10;
@@ -44,6 +66,7 @@ export function sendChatMessage(
       timeZone: deviceTimeZone(),
       settings: assistantSettings(),
       viaVoice: options.viaVoice === true,
+      alarms: registeredAlarms(),
     },
   });
 }
