@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -19,6 +19,15 @@ import {
   confirmPendingAction,
   type PendingAction,
 } from "@/api/gemini";
+import {
+  blockFromError,
+  fetchAiUsage,
+  formatWait,
+  toUsageState,
+  type AiBlock,
+  type UsageState,
+} from "@/api/usage";
+import { UsageBanner } from "@/components/UsageBanner";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { handleDeviceAction } from "@/services/deviceActions";
 import { TypingIndicator } from "@/components/TypingIndicator";
@@ -42,6 +51,8 @@ export default function ChatScreen() {
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [willCancel, setWillCancel] = useState(false);
+  const [usage, setUsage] = useState<UsageState | null>(null);
+  const [aiBlock, setAiBlock] = useState<AiBlock | null>(null);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pulse = useRef(new Animated.Value(1)).current;
   const listRef = useRef<FlatList<ChatMessage>>(null);
@@ -59,6 +70,28 @@ export default function ChatScreen() {
     picker?.resolve(index);
     setPicker(null);
   };
+
+  // Sin mensajes propios o sin cupo de IA: no se puede enviar hasta que termine la espera.
+  const blocked =
+    aiBlock !== null ||
+    (usage !== null && usage.limit > 0 && usage.remaining <= 0 && Date.now() < usage.until);
+  const blockedRef = useRef(blocked);
+  blockedRef.current = blocked;
+
+  const loadUsage = useCallback(async () => {
+    try {
+      const { usage: u, aiBlock: b } = await fetchAiUsage();
+      setUsage(u);
+      setAiBlock(b);
+    } catch {
+      // Sin contador no se bloquea nada: el servidor igual rechaza lo que corresponda.
+      setAiBlock(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadUsage();
+  }, [loadUsage]);
 
   function pushAssistant(content: string, prefix = "assistant") {
     setMessages((prev) => [
@@ -93,8 +126,8 @@ export default function ChatScreen() {
   async function sendText(raw: string, opts: { viaVoice?: boolean; clearInput?: boolean } = {}) {
     const trimmed = raw.trim();
     if (!trimmed) return;
-    if (sending) {
-      // Hay otra respuesta en curso: lo dictado no se pierde, queda en la caja.
+    if (sending || blockedRef.current) {
+      // Hay otra respuesta en curso o no quedan mensajes: lo dictado no se pierde, queda en la caja.
       if (opts.viaVoice) setInput(trimmed);
       return;
     }
@@ -111,10 +144,13 @@ export default function ChatScreen() {
     setSending(true);
 
     try {
-      const { reply, pendingAction, deviceAction } = await sendChatMessage(trimmed, history, {
-        viaVoice: opts.viaVoice,
-      });
+      const { reply, pendingAction, deviceAction, usage: newUsage } = await sendChatMessage(
+        trimmed,
+        history,
+        { viaVoice: opts.viaVoice }
+      );
       setMessages((prev) => [...prev, reply]);
+      if (newUsage) setUsage(toUsageState(newUsage));
 
       if (deviceAction) {
         // Alarmas y temporizadores los ejecuta la app en el reloj del teléfono.
@@ -138,8 +174,23 @@ export default function ChatScreen() {
           { cancelable: false }
         );
       }
-    } catch {
-      pushAssistant("No pude procesar eso ahora. Intenta de nuevo en un momento.", "error");
+    } catch (err) {
+      const block = blockFromError(err);
+      if (block) {
+        // No se envió nada: el mensaje vuelve a la caja y se informa la espera exacta.
+        setAiBlock(block);
+        setMessages((prev) => prev.filter((m) => m.id !== userMessage.id));
+        setInput(trimmed);
+        pushAssistant(
+          block.reason === "ai_quota"
+            ? `La IA alcanzó su límite diario. Podrás usarla de nuevo en ${formatWait(block.until - Date.now())}.`
+            : `Ya usaste todos tus mensajes de hoy. Se renuevan en ${formatWait(block.until - Date.now())}.`,
+          "error"
+        );
+        if (block.reason === "user_limit") loadUsage();
+      } else {
+        pushAssistant("No pude procesar eso ahora. Intenta de nuevo en un momento.", "error");
+      }
     } finally {
       setSending(false);
     }
@@ -175,12 +226,17 @@ export default function ChatScreen() {
       onStartShouldSetPanResponder: () => true,
       onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: () => {
+        if (blockedRef.current) {
+          showNotice("No hay mensajes disponibles por ahora.");
+          return;
+        }
         Keyboard.dismiss();
         setCancelling(false);
         voiceRef.current.startHold();
       },
       onPanResponderMove: (_, gesture) => setCancelling(gesture.dx < -CANCEL_DX),
       onPanResponderRelease: () => {
+        if (blockedRef.current && !voiceRef.current.listening) return;
         if (willCancelRef.current) voiceRef.current.cancelHold();
         else voiceRef.current.releaseHold();
         setCancelling(false);
@@ -280,6 +336,8 @@ export default function ChatScreen() {
         </View>
       ) : null}
 
+      <UsageBanner usage={usage} block={aiBlock} onExpire={loadUsage} />
+
       <View style={styles.inputRow}>
         <TextInput
           style={styles.input}
@@ -288,7 +346,7 @@ export default function ChatScreen() {
           placeholder="Escribí un mensaje..."
           placeholderTextColor="#64748B"
           onSubmitEditing={handleSend}
-          editable={!sending && !voice.listening}
+          editable={!sending && !voice.listening && !blocked}
         />
         <View
           {...micResponder.panHandlers}
@@ -306,7 +364,11 @@ export default function ChatScreen() {
             resizeMode="contain"
           />
         </View>
-        <Pressable style={styles.sendButton} onPress={handleSend} disabled={sending}>
+        <Pressable
+          style={[styles.sendButton, blocked && styles.sendButtonDisabled]}
+          onPress={handleSend}
+          disabled={sending || blocked}
+        >
           <Text style={styles.sendButtonText}>Enviar</Text>
         </Pressable>
       </View>
@@ -385,5 +447,6 @@ const styles = StyleSheet.create({
     alignSelf: "stretch",
     justifyContent: "center",
   },
+  sendButtonDisabled: { opacity: 0.4 },
   sendButtonText: { color: "#0F172A", fontWeight: "700" },
 });

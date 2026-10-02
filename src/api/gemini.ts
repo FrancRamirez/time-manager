@@ -3,6 +3,7 @@ import { assistantSettings, deviceTimeZone } from "./preferences";
 import { registeredAlarms } from "@/services/deviceActions";
 import type { Day } from "@/services/clock";
 import type { ChatMessage } from "@/types";
+import type { AiUsage } from "./usage";
 
 interface AlarmFields {
   hour: number;
@@ -39,6 +40,8 @@ interface SendMessageResponse {
   /** Acción aplicada de inmediato (modo Piloto Automático). */
   executedAction?: { type: PendingAction["type"]; description: string };
   deviceAction?: DeviceAction;
+  /** Cupo diario de mensajes tras este envío (no viene si el servidor no lo puede calcular). */
+  usage?: AiUsage;
 }
 
 const MAX_HISTORY = 10;
