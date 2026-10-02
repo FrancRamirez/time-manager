@@ -17,6 +17,7 @@ export type DeviceAction = (
   | ({ kind: "alarm_cancel"; alarmId: string } & AlarmFields)
   | { kind: "alarm_update"; alarmId: string; old: AlarmFields; new: AlarmFields }
   | { kind: "timer_set"; seconds: number; label?: string }
+  | { kind: "whatsapp_send"; contactName?: string; phone?: string; message: string }
 ) & {
   description: string;
   /** true: pedir confirmación antes de ejecutar. false: ejecutar de inmediato. */

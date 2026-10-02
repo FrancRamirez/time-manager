@@ -22,6 +22,7 @@ import {
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { handleDeviceAction } from "@/services/deviceActions";
 import { TypingIndicator } from "@/components/TypingIndicator";
+import { OptionPicker } from "@/components/OptionPicker";
 import type { ChatMessage } from "@/types";
 
 /**
@@ -44,6 +45,20 @@ export default function ChatScreen() {
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pulse = useRef(new Animated.Value(1)).current;
   const listRef = useRef<FlatList<ChatMessage>>(null);
+  const [picker, setPicker] = useState<{
+    title: string;
+    options: string[];
+    resolve: (index: number | null) => void;
+  } | null>(null);
+  // Las acciones del dispositivo piden elegir (p. ej. entre varios números) mediante esta lista.
+  const deviceUi = useRef({
+    chooseOption: (title: string, options: string[]) =>
+      new Promise<number | null>((resolve) => setPicker({ title, options, resolve })),
+  }).current;
+  const closePicker = (index: number | null) => {
+    picker?.resolve(index);
+    setPicker(null);
+  };
 
   function pushAssistant(content: string, prefix = "assistant") {
     setMessages((prev) => [
@@ -103,8 +118,10 @@ export default function ChatScreen() {
 
       if (deviceAction) {
         // Alarmas y temporizadores los ejecuta la app en el reloj del teléfono.
-        handleDeviceAction(deviceAction, (result) =>
-          pushAssistant(result.message, result.ok ? "assistant" : "error")
+        handleDeviceAction(
+          deviceAction,
+          (result) => pushAssistant(result.message, result.ok ? "assistant" : "error"),
+          deviceUi
         );
       }
 
@@ -293,6 +310,13 @@ export default function ChatScreen() {
           <Text style={styles.sendButtonText}>Enviar</Text>
         </Pressable>
       </View>
+      <OptionPicker
+        visible={picker !== null}
+        title={picker?.title ?? ""}
+        options={picker?.options ?? []}
+        onSelect={(i) => closePicker(i)}
+        onCancel={() => closePicker(null)}
+      />
     </KeyboardAvoidingView>
   );
 }

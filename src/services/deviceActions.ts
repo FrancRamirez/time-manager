@@ -1,7 +1,13 @@
 import { Alert } from "react-native";
 import * as clock from "@/services/clock";
+import { composeWhatsapp, type ChooseOption } from "@/services/whatsapp";
 import { activeAlarms, newAlarmId, nextFireAt, useAlarmStore } from "@/store/alarmStore";
 import type { DeviceAction } from "@/api/gemini";
+
+/** Interfaz que la pantalla ofrece para las acciones que necesitan elegir algo. */
+export interface DeviceUi {
+  chooseOption: ChooseOption;
+}
 
 export interface DeviceActionResult {
   ok: boolean;
@@ -17,7 +23,10 @@ function failure(what: string, error?: string): DeviceActionResult {
 }
 
 /** Ejecuta en el dispositivo una acción que propuso el asistente y actualiza el registro de alarmas. */
-export async function executeDeviceAction(action: DeviceAction): Promise<DeviceActionResult> {
+export async function executeDeviceAction(
+  action: DeviceAction,
+  ui: DeviceUi
+): Promise<DeviceActionResult> {
   const store = useAlarmStore.getState();
 
   switch (action.kind) {
@@ -76,6 +85,9 @@ export async function executeDeviceAction(action: DeviceAction): Promise<DeviceA
       };
     }
 
+    case "whatsapp_send":
+      return composeWhatsapp(action, ui.chooseOption);
+
     case "timer_set": {
       const res = await clock.setTimer(action);
       if (!res.ok) return failure("iniciar el temporizador", res.error);
@@ -90,20 +102,22 @@ export async function executeDeviceAction(action: DeviceAction): Promise<DeviceA
  */
 export function handleDeviceAction(
   action: DeviceAction,
-  report: (result: DeviceActionResult) => void
+  report: (result: DeviceActionResult) => void,
+  ui: DeviceUi
 ) {
-  const run = async () => report(await executeDeviceAction(action));
+  const run = async () => report(await executeDeviceAction(action, ui));
 
   if (!action.requiresConfirmation) {
     void run();
     return;
   }
+  const isWhatsapp = action.kind === "whatsapp_send";
   Alert.alert(
-    "Confirmar acción",
+    isWhatsapp ? "Preparar mensaje de WhatsApp" : "Confirmar acción",
     action.description,
     [
       { text: "Cancelar", style: "cancel", onPress: () => report({ ok: true, message: "Entendido, no hice cambios." }) },
-      { text: "Confirmar", onPress: () => void run() },
+      { text: isWhatsapp ? "Abrir WhatsApp" : "Confirmar", onPress: () => void run() },
     ],
     { cancelable: false }
   );

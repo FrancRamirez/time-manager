@@ -25,6 +25,9 @@
         "RECORD_AUDIO",
         "com.android.alarm.permission.SET_ALARM"
       ],
+      "blockedPermissions": [
+        "android.permission.WRITE_CONTACTS"
+      ],
       "googleServicesFile": "./google-services.json"
     },
     "plugins": [
@@ -38,6 +41,12 @@
       ],
       "@react-native-firebase/app",
       "@react-native-google-signin/google-signin",
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Permite que Time Manager busque en tus contactos el número de la persona a quien quieres escribir por WhatsApp. Los contactos no salen de tu teléfono."
+        }
+      ],
       [
         "expo-speech-recognition",
         {
