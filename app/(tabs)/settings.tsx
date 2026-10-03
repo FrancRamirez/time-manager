@@ -11,6 +11,8 @@ import { BlockedHoursPicker } from "@/components/BlockedHoursPicker";
 import { Stepper } from "@/components/Stepper";
 import { useSettingsStore } from "@/store/settingsStore";
 import { useUserStore } from "@/store/userStore";
+import { useRouter } from "expo-router";
+import { restrictedCount } from "@/constants/apps";
 import { logout } from "@/services/session";
 
 export default function SettingsScreen() {
@@ -23,6 +25,8 @@ export default function SettingsScreen() {
     removeBlockedHour,
   } = useSettingsStore();
   const user = useUserStore((s) => s.user);
+  const router = useRouter();
+  const restricted = restrictedCount(settings.appAccess);
 
   function confirmLogout() {
     Alert.alert(
@@ -103,6 +107,24 @@ export default function SettingsScreen() {
         />
       </Section>
 
+      <Section title="Restringir aplicaciones">
+        <Pressable
+          style={styles.navRow}
+          onPress={() => router.push("/restrict-apps")}
+          accessibilityRole="button"
+        >
+          <View style={styles.navText}>
+            <Text style={styles.value}>Qué puede usar Frami</Text>
+            <Text style={styles.hint}>
+              {restricted === 0
+                ? "Todas las apps permitidas"
+                : `${restricted} ${restricted === 1 ? "app con restricción" : "apps con restricciones"}`}
+            </Text>
+          </View>
+          <Text style={styles.chevron}>›</Text>
+        </Pressable>
+      </Section>
+
       <Section title="Cuenta">
         {user?.email ? <Text style={styles.value}>{user.email}</Text> : null}
         <Pressable
@@ -167,6 +189,17 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: "center",
   },
+  navRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: "#1E293B",
+    borderRadius: 12,
+    padding: 14,
+  },
+  navText: { flex: 1, gap: 2 },
+  chevron: { color: "#64748B", fontSize: 22, marginLeft: 8 },
   link: { color: "#38BDF8", fontSize: 14, fontWeight: "600" },
   logoutText: { color: "#F87171", fontWeight: "700", fontSize: 14 },
 });

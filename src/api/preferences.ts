@@ -5,12 +5,13 @@ import { useSettingsStore } from "@/store/settingsStore";
  * las valida y las hace cumplir). Se mandan junto con cada request relevante.
  */
 export function assistantSettings() {
-  const { autonomyLevel, bufferMinutes, dailyActionLimit, blockedHours } =
+  const { autonomyLevel, bufferMinutes, dailyActionLimit, blockedHours, appAccess } =
     useSettingsStore.getState().settings;
   return {
     autonomyLevel,
     bufferMinutes,
     dailyActionLimit,
+    appAccess: { ...appAccess },
     blockedHours: blockedHours.map(({ dayOfWeek, startTime, endTime, label }) => ({
       dayOfWeek,
       startTime,

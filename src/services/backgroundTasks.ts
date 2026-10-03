@@ -65,6 +65,10 @@ TaskManager.defineTask(SYNC_TASK_NAME, async () => {
     if (!useSettingsStore.getState().hydrated) {
       await useSettingsStore.getState().hydrate();
     }
+    // Con Calendar restringido no hay nada que analizar ni mover: ni siquiera se llama al servidor.
+    if (useSettingsStore.getState().settings.appAccess.calendar !== "allowed") {
+      return BackgroundFetch.BackgroundFetchResult.NoData;
+    }
     const scan = await scanForConflicts({ force: true });
     if (!scan) return BackgroundFetch.BackgroundFetchResult.NoData;
     const notified = await notifyScan(scan);

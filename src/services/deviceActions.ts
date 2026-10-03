@@ -3,6 +3,9 @@ import * as clock from "@/services/clock";
 import { composeWhatsapp, type ChooseOption } from "@/services/whatsapp";
 import { activeAlarms, newAlarmId, nextFireAt, useAlarmStore } from "@/store/alarmStore";
 import type { DeviceAction } from "@/api/gemini";
+import { appAllows, restrictedMessage } from "@/constants/apps";
+import { useSettingsStore } from "@/store/settingsStore";
+import type { AppId } from "@/types";
 
 /** Interfaz que la pantalla ofrece para las acciones que necesitan elegir algo. */
 export interface DeviceUi {
@@ -22,11 +25,26 @@ function failure(what: string, error?: string): DeviceActionResult {
   return { ok: false, message: `No pude ${what}. ${CLOCK_APP_HINT}` };
 }
 
+/**
+ * Última capa de la restricción por app: aunque el servidor ya la hace cumplir, la app
+ * revisa lo mismo antes de abrir el Reloj o WhatsApp (los ajustes pudieron cambiar después).
+ */
+function restrictionFor(action: DeviceAction): DeviceActionResult | null {
+  const app: AppId = action.kind === "whatsapp_send" ? "whatsapp" : "clock";
+  const access = useSettingsStore.getState().settings.appAccess;
+  return appAllows(access, app, true)
+    ? null
+    : { ok: false, message: restrictedMessage(app, access[app]) };
+}
+
 /** Ejecuta en el dispositivo una acción que propuso el asistente y actualiza el registro de alarmas. */
 export async function executeDeviceAction(
   action: DeviceAction,
   ui: DeviceUi
 ): Promise<DeviceActionResult> {
+  const blocked = restrictionFor(action);
+  if (blocked) return blocked;
+
   const store = useAlarmStore.getState();
 
   switch (action.kind) {
@@ -106,6 +124,13 @@ export function handleDeviceAction(
   ui: DeviceUi
 ) {
   const run = async () => report(await executeDeviceAction(action, ui));
+
+  // Si ya está restringida, ni se muestra el diálogo de confirmación.
+  const blocked = restrictionFor(action);
+  if (blocked) {
+    report(blocked);
+    return;
+  }
 
   if (!action.requiresConfirmation) {
     void run();

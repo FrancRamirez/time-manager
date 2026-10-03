@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import * as SecureStore from "expo-secure-store";
-import type { UserSettings, BlockedHourRange } from "@/types";
+import type { UserSettings, BlockedHourRange, AccessLevel, AppId } from "@/types";
+import { DEFAULT_APP_ACCESS, sanitizeAppAccess } from "@/constants/apps";
 
 const STORAGE_KEY = "tm_settings";
 
@@ -9,6 +10,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   dailyActionLimit: 100,
   bufferMinutes: 15,
   blockedHours: [],
+  appAccess: DEFAULT_APP_ACCESS,
   notificationChannels: {
     sound: true,
     vibration: true,
@@ -27,6 +29,7 @@ interface SettingsState {
   setDailyActionLimit: (limit: number) => void;
   addBlockedHour: (range: BlockedHourRange) => void;
   removeBlockedHour: (id: string) => void;
+  setAppAccess: (app: AppId, level: AccessLevel) => void;
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
@@ -46,6 +49,7 @@ export const useSettingsStore = create<SettingsState>((set) => ({
               ...saved.notificationChannels,
             },
             blockedHours: Array.isArray(saved.blockedHours) ? saved.blockedHours : [],
+            appAccess: sanitizeAppAccess(saved.appAccess),
           },
         });
       }
@@ -74,6 +78,13 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       settings: {
         ...state.settings,
         blockedHours: state.settings.blockedHours.filter((b) => b.id !== id),
+      },
+    })),
+  setAppAccess: (app, level) =>
+    set((state) => ({
+      settings: {
+        ...state.settings,
+        appAccess: { ...state.settings.appAccess, [app]: level },
       },
     })),
 }));

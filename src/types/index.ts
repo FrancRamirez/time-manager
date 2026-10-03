@@ -27,11 +27,17 @@ export interface BlockedHourRange {
   label?: string;
 }
 
+/** Apps que el asistente puede usar (IDEA 2: Restringir aplicaciones). */
+export type AppId = "calendar" | "gmail" | "clock" | "whatsapp";
+export type AccessLevel = "allowed" | "read_only" | "blocked";
+export type AppAccess = Record<AppId, AccessLevel>;
+
 export interface UserSettings {
   autonomyLevel: AutonomyLevel;
   dailyActionLimit: number;
   bufferMinutes: number;
   blockedHours: BlockedHourRange[];
+  appAccess: AppAccess;
   notificationChannels: {
     sound: boolean;
     vibration: boolean;

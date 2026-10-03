@@ -85,6 +85,6 @@ export function sendChatMessage(
 export function confirmPendingAction(actionId: string, approve: boolean) {
   return apiFetch<{ ok: boolean; executed: boolean }>(
     `/api/ai/actions/${actionId}/confirm`,
-    { method: "POST", body: { approve } }
+    { method: "POST", body: { approve, settings: assistantSettings() } }
   );
 }

@@ -27,6 +27,9 @@ export function scanForConflicts(options: { force?: boolean } = {}): Promise<Sca
 
   const settings = assistantSettings();
   const key = JSON.stringify(settings);
+  // Con Calendar restringido el servidor no analiza nada: basta avisarle una vez por cambio de
+  // ajustes (así retira las sugerencias pendientes) y no repetir la llamada.
+  if (settings.appAccess.calendar !== "allowed" && key === lastScanKey) return Promise.resolve(null);
   const fresh = Date.now() - lastScanAt < SCAN_MIN_INTERVAL_MS && key === lastScanKey;
   if (!options.force && fresh) return Promise.resolve(null);
 

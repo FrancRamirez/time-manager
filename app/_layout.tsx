@@ -76,7 +76,17 @@ export default function RootLayout() {
   return (
     <>
       <StatusBar style="light" />
-      <Stack screenOptions={{ headerShown: false }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen
+          name="restrict-apps"
+          options={{
+            headerShown: true,
+            title: "Restringir aplicaciones",
+            headerStyle: { backgroundColor: "#0F172A" },
+            headerTintColor: "#F1F5F9",
+          }}
+        />
+      </Stack>
     </>
   );
 }
