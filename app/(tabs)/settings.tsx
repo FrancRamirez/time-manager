@@ -1,8 +1,10 @@
-import { ScrollView, View, Text, Switch, StyleSheet } from "react-native";
+import { Alert, Pressable, ScrollView, View, Text, Switch, StyleSheet } from "react-native";
 import { AutonomySelector } from "@/components/AutonomySelector";
 import { BlockedHoursPicker } from "@/components/BlockedHoursPicker";
 import { Stepper } from "@/components/Stepper";
 import { useSettingsStore } from "@/store/settingsStore";
+import { useUserStore } from "@/store/userStore";
+import { logout } from "@/services/session";
 
 export default function SettingsScreen() {
   const {
@@ -13,6 +15,18 @@ export default function SettingsScreen() {
     addBlockedHour,
     removeBlockedHour,
   } = useSettingsStore();
+  const user = useUserStore((s) => s.user);
+
+  function confirmLogout() {
+    Alert.alert(
+      "Cerrar sesión",
+      "Se borrarán de este teléfono la sesión y el historial del chat. Tus ajustes se conservan.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Cerrar sesión", style: "destructive", onPress: () => void logout() },
+      ]
+    );
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -73,6 +87,17 @@ export default function SettingsScreen() {
           onRemove={removeBlockedHour}
         />
       </Section>
+
+      <Section title="Cuenta">
+        {user?.email ? <Text style={styles.value}>{user.email}</Text> : null}
+        <Pressable
+          style={styles.logoutButton}
+          onPress={confirmLogout}
+          accessibilityRole="button"
+        >
+          <Text style={styles.logoutText}>Cerrar sesión</Text>
+        </Pressable>
+      </Section>
     </ScrollView>
   );
 }
@@ -109,4 +134,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   toggleLabel: { color: "#E2E8F0", fontSize: 14 },
+  logoutButton: {
+    borderWidth: 1,
+    borderColor: "#F87171",
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  logoutText: { color: "#F87171", fontWeight: "700", fontSize: 14 },
 });

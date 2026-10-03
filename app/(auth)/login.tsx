@@ -7,6 +7,8 @@ import { useUserStore } from "@/store/userStore";
 export default function LoginScreen() {
   const router = useRouter();
   const setUser = useUserStore((s) => s.setUser);
+  const sessionNotice = useUserStore((s) => s.sessionNotice);
+  const setSessionNotice = useUserStore((s) => s.setSessionNotice);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -15,6 +17,7 @@ export default function LoginScreen() {
     setError(null);
     try {
       const user = await signInWithGoogle();
+      setSessionNotice(null);
       setUser(user);
       router.replace(
         user.onboardingCompleted ? "/(tabs)/agenda" : "/(auth)/onboarding"
@@ -47,6 +50,8 @@ export default function LoginScreen() {
       <Text style={styles.subtitle}>
         Tu asistente de agenda multicanal, con foco en privacidad.
       </Text>
+
+      {sessionNotice ? <Text style={styles.notice}>{sessionNotice}</Text> : null}
 
       <Pressable style={styles.button} onPress={handleSignIn} disabled={loading}>
         {loading ? (
@@ -87,4 +92,11 @@ const styles = StyleSheet.create({
   },
   buttonText: { color: "#0F172A", fontWeight: "700", fontSize: 15 },
   error: { color: "#F87171", marginTop: 16, fontSize: 13 },
+  notice: {
+    color: "#FBBF24",
+    fontSize: 13,
+    textAlign: "center",
+    marginBottom: 20,
+    maxWidth: 300,
+  },
 });

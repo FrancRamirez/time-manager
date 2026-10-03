@@ -3,7 +3,7 @@ import {
   statusCodes,
 } from "@react-native-google-signin/google-signin";
 import { apiFetch } from "@/api/client";
-import { saveTokens, clearTokens } from "./secureStorage";
+import { saveTokens, clearTokens, getLastUserId, setLastUserId } from "./secureStorage";
 import { clearConversations } from "./conversations";
 import type { User } from "@/types";
 
@@ -63,6 +63,13 @@ export async function signInWithGoogle(): Promise<User> {
   );
 
   await saveTokens(accessToken, refreshToken);
+
+  // Si entra una cuenta distinta a la anterior, el historial del chat de la otra no se muestra.
+  const lastUserId = await getLastUserId().catch(() => null);
+  if (lastUserId && lastUserId !== user.id) {
+    await clearConversations().catch(() => {});
+  }
+  await setLastUserId(user.id).catch(() => {});
   return user;
 }
 
