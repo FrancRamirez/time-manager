@@ -11,10 +11,11 @@ const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 if (webClientId) {
   GoogleSignin.configure({
     webClientId,
-    // Scopes necesarios para Calendar y detección de correos en Gmail
+    // Calendar + Gmail. gmail.modify cubre leer, redactar, enviar, archivar y mover a la
+    // papelera (no borra definitivamente); reemplaza a gmail.readonly: un solo permiso restringido.
     scopes: [
       "https://www.googleapis.com/auth/calendar",
-      "https://www.googleapis.com/auth/gmail.readonly",
+      "https://www.googleapis.com/auth/gmail.modify",
     ],
     offlineAccess: true, // necesario para obtener refresh token server-side
     forceCodeForRefreshToken: true, // pide consentimiento de nuevo para que Google reemita el refresh token

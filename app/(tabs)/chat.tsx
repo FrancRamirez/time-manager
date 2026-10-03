@@ -30,6 +30,7 @@ import {
 import { UsageBanner } from "@/components/UsageBanner";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { handleDeviceAction } from "@/services/deviceActions";
+import { apiErrorMessage } from "@/api/client";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { OptionPicker } from "@/components/OptionPicker";
 import type { ChatMessage } from "@/types";
@@ -44,6 +45,16 @@ const AUTO_SEND_VOICE = true;
 const CANCEL_DX = 90;
 
 const MIC_ICON = require("../../assets/mic.png");
+
+const DONE_TEXT: Record<PendingAction["type"], string> = {
+  create: "Listo, ya lo hice en tu calendario.",
+  reschedule: "Listo, ya lo hice en tu calendario.",
+  cancel: "Listo, ya lo hice en tu calendario.",
+  email_draft: "Listo, dejé el borrador en tu Gmail.",
+  email_send: "Listo, el correo fue enviado.",
+  email_modify: "Listo, actualicé el correo en tu Gmail.",
+  email_trash: "Listo, moví el correo a la papelera de Gmail.",
+};
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -114,10 +125,14 @@ export default function ChatScreen() {
   async function resolveAction(action: PendingAction, approve: boolean) {
     try {
       await confirmPendingAction(action.id, approve);
-      pushAssistant(approve ? "Listo, ya lo hice en tu calendario." : "Entendido, no hice cambios.");
-    } catch {
+      pushAssistant(approve ? DONE_TEXT[action.type] : "Entendido, no hice cambios.");
+    } catch (err) {
+      // Si el servidor explica el motivo (p. ej. falta el permiso de Gmail), se muestra.
       pushAssistant(
-        "No pude completar la acción. Puede que haya vencido; pídemela de nuevo.",
+        apiErrorMessage(
+          err,
+          "No pude completar la acción. Puede que haya vencido; pídemela de nuevo."
+        ),
         "error"
       );
     }
@@ -165,7 +180,7 @@ export default function ChatScreen() {
         // Toda acción que modifica el calendario requiere confirmación
         // explícita (regla de negocio de la spec).
         Alert.alert(
-          "Confirmar acción",
+          pendingAction.type === "email_send" ? "¿Enviar este correo?" : "Confirmar acción",
           pendingAction.description,
           [
             { text: "Cancelar", style: "cancel", onPress: () => resolveAction(pendingAction, false) },

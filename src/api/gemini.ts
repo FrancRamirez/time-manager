@@ -28,7 +28,14 @@ export type DeviceAction = (
 export interface PendingAction {
   /** Id de la fila en pending_actions; se usa para confirmar o rechazar. */
   id: string;
-  type: "reschedule" | "cancel" | "create";
+  type:
+    | "reschedule"
+    | "cancel"
+    | "create"
+    | "email_draft"
+    | "email_send"
+    | "email_modify"
+    | "email_trash";
   /** Texto armado por el servidor con los datos validados de la acción. */
   description: string;
   payload: Record<string, unknown>;
