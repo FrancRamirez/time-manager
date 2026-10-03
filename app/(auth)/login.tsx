@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet, ActivityIndicator } from "react-nati
 import { useRouter } from "expo-router";
 import { signInWithGoogle, isSignInCancelled } from "@/services/auth";
 import { useUserStore } from "@/store/userStore";
+import { ASSISTANT_NAME, AUTHOR_CREDIT } from "@/constants/brand";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -48,7 +49,7 @@ export default function LoginScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Time Manager</Text>
       <Text style={styles.subtitle}>
-        Tu asistente de agenda multicanal, con foco en privacidad.
+        {ASSISTANT_NAME}, tu asistente de agenda multicanal, con foco en privacidad.
       </Text>
 
       {sessionNotice ? <Text style={styles.notice}>{sessionNotice}</Text> : null}
@@ -62,6 +63,8 @@ export default function LoginScreen() {
       </Pressable>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      <Text style={styles.credit}>{AUTHOR_CREDIT}</Text>
     </View>
   );
 }
@@ -92,6 +95,7 @@ const styles = StyleSheet.create({
   },
   buttonText: { color: "#0F172A", fontWeight: "700", fontSize: 15 },
   error: { color: "#F87171", marginTop: 16, fontSize: 13 },
+  credit: { position: "absolute", bottom: 20, color: "#475569", fontSize: 11 },
   notice: {
     color: "#FBBF24",
     fontSize: 13,

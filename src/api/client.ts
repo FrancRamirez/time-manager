@@ -8,7 +8,7 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 if (!API_URL) {
   console.warn(
-    "EXPO_PUBLIC_API_URL no está definida. Configurá tu .env antes de compilar."
+    "EXPO_PUBLIC_API_URL no está definida. Configura tu .env antes de compilar."
   );
 }
 

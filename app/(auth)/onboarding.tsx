@@ -35,7 +35,7 @@ export default function OnboardingScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Empezá con Time Manager</Text>
+      <Text style={styles.title}>Empieza con Time Manager</Text>
       <Text style={styles.description}>
         Pago único de $5 USD para activar tu cuenta. Después, suscripción
         mensual para mantener el servicio activo.

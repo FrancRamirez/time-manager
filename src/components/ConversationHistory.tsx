@@ -79,7 +79,7 @@ export function ConversationHistory({ visible, activeId, onOpen, onDeleted, onCl
           ListEmptyComponent={
             items === null ? null : (
               <Text style={styles.empty}>
-                Todavía no hay conversaciones guardadas. Las que tengas con el asistente aparecerán aquí.
+                Todavía no hay conversaciones guardadas. Las que tengas con Frami aparecerán aquí.
               </Text>
             )
           }
@@ -114,7 +114,7 @@ export function ConversationHistory({ visible, activeId, onOpen, onDeleted, onCl
 
         <Text style={styles.footnote}>
           Se guardan en este teléfono (las últimas {MAX_CONVERSATIONS}); el servidor no las guarda.
-          Al retomar una conversación, el asistente recuerda solo los últimos mensajes.
+          Al retomar una conversación, Frami recuerda solo los últimos mensajes.
         </Text>
         {items && items.length > 0 ? (
           <Pressable style={styles.clearAll} onPress={confirmClearAll} accessibilityRole="button">

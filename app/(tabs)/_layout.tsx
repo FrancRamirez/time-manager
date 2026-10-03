@@ -48,7 +48,7 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="agenda" options={{ title: "Agenda", tabBarIcon: tabIcon(ICONS.agenda) }} />
-      <Tabs.Screen name="chat" options={{ title: "Asistente", tabBarIcon: tabIcon(ICONS.chat) }} />
+      <Tabs.Screen name="chat" options={{ title: "Frami", tabBarIcon: tabIcon(ICONS.chat) }} />
       <Tabs.Screen name="settings" options={{ title: "Ajustes", tabBarIcon: tabIcon(ICONS.settings) }} />
     </Tabs>
   );

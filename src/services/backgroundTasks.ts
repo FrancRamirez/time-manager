@@ -24,7 +24,7 @@ async function notifyScan(scan: ScanResult): Promise<boolean> {
   if (scan.applied.length > 0) {
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: "Piloto Automático",
+        title: "Frami · Piloto Automático",
         body: scan.applied
           .slice(0, 3)
           .map((a) => a.description)
@@ -37,7 +37,7 @@ async function notifyScan(scan: ScanResult): Promise<boolean> {
   if (scan.created.length === 1) {
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: "Conflicto en tu agenda",
+        title: "Frami: conflicto en tu agenda",
         body: scan.created[0].reason,
         data: { eventId: scan.created[0].eventId },
         categoryIdentifier: RESCHEDULE_CATEGORY,
@@ -47,7 +47,7 @@ async function notifyScan(scan: ScanResult): Promise<boolean> {
   } else if (scan.created.length > 1) {
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: `Hay ${scan.created.length} conflictos en tu agenda`,
+        title: `Frami: hay ${scan.created.length} conflictos en tu agenda`,
         body: "Abre Time Manager para revisar las sugerencias.",
       },
       trigger,

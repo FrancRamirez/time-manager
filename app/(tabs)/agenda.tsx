@@ -90,7 +90,7 @@ export default function AgendaScreen() {
       {suggestions.length > 0 && (
         <View style={styles.suggestionsBanner}>
           <Text style={styles.suggestionsTitle}>
-            Tenés {suggestions.length} sugerencia(s) pendiente(s)
+            Tienes {suggestions.length} sugerencia(s) pendiente(s)
           </Text>
           {suggestions.map((s) => (
             <View key={s.eventId} style={styles.suggestionRow}>

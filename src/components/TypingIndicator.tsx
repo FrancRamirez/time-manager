@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
-import { Animated, Easing, StyleSheet, View } from "react-native";
+import { Animated, Easing, StyleSheet, Text, View } from "react-native";
+import { ASSISTANT_NAME } from "@/constants/brand";
 
 const DOTS = 3;
 const STEP_MS = 160; // desfase entre puntos
@@ -43,7 +44,7 @@ export function TypingIndicator() {
       style={styles.bubble}
       accessible
       accessibilityRole="progressbar"
-      accessibilityLabel="El asistente está preparando la respuesta"
+      accessibilityLabel={`${ASSISTANT_NAME} está escribiendo`}
     >
       {dots.map((value, i) => (
         <Animated.View
@@ -59,6 +60,7 @@ export function TypingIndicator() {
           ]}
         />
       ))}
+      <Text style={styles.caption}>{ASSISTANT_NAME} está escribiendo…</Text>
     </View>
   );
 }
@@ -76,4 +78,5 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#94A3B8" },
+  caption: { color: "#94A3B8", fontSize: 12, marginLeft: 6 },
 });

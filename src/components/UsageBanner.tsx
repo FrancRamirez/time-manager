@@ -39,7 +39,7 @@ export function UsageBanner({ usage, block, onExpire }: Props) {
   let text: string;
   let warn = true;
   if (block?.reason === "ai_quota") {
-    text = `La IA alcanzó su límite diario. Se restablece en ${wait}.`;
+    text = `Frami alcanzó su límite diario. Se restablece en ${wait}.`;
   } else if (block || (usage && usage.remaining <= 0)) {
     text = `Se acabaron tus mensajes de hoy. Se renuevan en ${wait}.`;
   } else if (usage) {

@@ -271,7 +271,7 @@ export default function ChatScreen() {
         setInput(trimmed);
         pushAssistant(
           block.reason === "ai_quota"
-            ? `La IA alcanzó su límite diario. Podrás usarla de nuevo en ${formatWait(block.until - Date.now())}.`
+            ? `Frami alcanzó su límite diario. Podrás volver a hablar con Frami en ${formatWait(block.until - Date.now())}.`
             : `Ya usaste todos tus mensajes de hoy. Se renuevan en ${formatWait(block.until - Date.now())}.`,
           "error"
         );
@@ -483,8 +483,9 @@ export default function ChatScreen() {
         )}
         ListEmptyComponent={
           <View>
+            <Text style={styles.emptyTitle}>Hola, soy Frami, tu asistente de agenda.</Text>
             <Text style={styles.empty}>
-              Pedime algo como "movete el dentista al viernes a la tarde".
+              Pídeme algo como "mueve el dentista al viernes por la tarde".
             </Text>
             <Text style={styles.emptySecondary}>
               También puedes mantener presionado el micrófono y hablar.
@@ -523,7 +524,7 @@ export default function ChatScreen() {
           style={styles.input}
           value={input}
           onChangeText={setInput}
-          placeholder="Escribí un mensaje..."
+          placeholder="Escribe un mensaje..."
           placeholderTextColor="#64748B"
           onSubmitEditing={handleSend}
           editable={!sending && !voice.listening && !blocked}
@@ -575,7 +576,8 @@ const styles = StyleSheet.create({
   headerActions: { flexDirection: "row", gap: 16, marginRight: 14 },
   headerButton: { color: "#38BDF8", fontWeight: "700", fontSize: 14 },
   listContent: { padding: 16, gap: 8 },
-  empty: { color: "#64748B", textAlign: "center", marginTop: 40 },
+  emptyTitle: { color: "#CBD5E1", textAlign: "center", marginTop: 40, fontSize: 16, fontWeight: "600" },
+  empty: { color: "#64748B", textAlign: "center", marginTop: 12 },
   emptySecondary: { color: "#475569", textAlign: "center", marginTop: 8, fontSize: 13 },
   bubble: { maxWidth: "80%", borderRadius: 12, padding: 10, marginBottom: 8 },
   bubbleUser: { backgroundColor: "#38BDF8", alignSelf: "flex-end" },

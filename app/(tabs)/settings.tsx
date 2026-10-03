@@ -1,4 +1,11 @@
-import { Alert, Pressable, ScrollView, View, Text, Switch, StyleSheet } from "react-native";
+import { Alert, Linking, Pressable, ScrollView, View, Text, Switch, StyleSheet } from "react-native";
+import Constants from "expo-constants";
+import {
+  APP_NAME,
+  AUTHOR_CREDIT,
+  AUTHOR_LINK_LABEL,
+  AUTHOR_URL,
+} from "@/constants/brand";
 import { AutonomySelector } from "@/components/AutonomySelector";
 import { BlockedHoursPicker } from "@/components/BlockedHoursPicker";
 import { Stepper } from "@/components/Stepper";
@@ -28,6 +35,14 @@ export default function SettingsScreen() {
     );
   }
 
+  async function openAuthorSite() {
+    try {
+      await Linking.openURL(AUTHOR_URL);
+    } catch {
+      Alert.alert("No se pudo abrir el enlace", `Puedes visitarlo en ${AUTHOR_URL}`);
+    }
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Section title="Nivel de autonomía">
@@ -40,7 +55,7 @@ export default function SettingsScreen() {
       {settings.autonomyLevel === "autopilot" && (
         <Section title="Límite diario de acciones automáticas">
           <Text style={styles.hint}>
-            Al llegar al límite, el asistente vuelve a pedirte confirmación hasta el día siguiente.
+            Al llegar al límite, Frami vuelve a pedirte confirmación hasta el día siguiente.
             Cancelar eventos siempre te pide confirmación.
           </Text>
           <Stepper
@@ -64,7 +79,7 @@ export default function SettingsScreen() {
 
       <Section title="Buffer entre citas">
         <Text style={styles.hint}>
-          Tiempo libre mínimo que el asistente deja antes y después de cada evento.
+          Tiempo libre mínimo que Frami deja antes y después de cada evento.
         </Text>
         <Stepper
           value={settings.bufferMinutes}
@@ -96,6 +111,17 @@ export default function SettingsScreen() {
           accessibilityRole="button"
         >
           <Text style={styles.logoutText}>Cerrar sesión</Text>
+        </Pressable>
+      </Section>
+
+      <Section title="Acerca de">
+        <Text style={styles.value}>
+          {APP_NAME}
+          {Constants.expoConfig?.version ? ` · v${Constants.expoConfig.version}` : ""}
+        </Text>
+        <Text style={styles.hint}>{AUTHOR_CREDIT}</Text>
+        <Pressable onPress={openAuthorSite} accessibilityRole="link" hitSlop={8}>
+          <Text style={styles.link}>{AUTHOR_LINK_LABEL}</Text>
         </Pressable>
       </Section>
     </ScrollView>
@@ -141,5 +167,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: "center",
   },
+  link: { color: "#38BDF8", fontSize: 14, fontWeight: "600" },
   logoutText: { color: "#F87171", fontWeight: "700", fontSize: 14 },
 });
