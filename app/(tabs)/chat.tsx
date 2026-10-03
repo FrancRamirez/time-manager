@@ -13,7 +13,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  AppState,
 } from "react-native";
+import { useNavigation } from "expo-router";
 import {
   sendChatMessage,
   confirmPendingAction,
@@ -33,6 +35,15 @@ import { handleDeviceAction } from "@/services/deviceActions";
 import { apiErrorMessage } from "@/api/client";
 import { TypingIndicator } from "@/components/TypingIndicator";
 import { OptionPicker } from "@/components/OptionPicker";
+import { ConversationHistory } from "@/components/ConversationHistory";
+import {
+  deleteConversation,
+  getActiveConversationId,
+  loadConversation,
+  newConversationId,
+  saveConversation,
+  setActiveConversationId,
+} from "@/services/conversations";
 import type { ChatMessage } from "@/types";
 
 /**
@@ -67,6 +78,17 @@ export default function ChatScreen() {
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pulse = useRef(new Animated.Value(1)).current;
   const listRef = useRef<FlatList<ChatMessage>>(null);
+
+  // --- Historial de conversaciones (guardado solo en el teléfono) -------------
+  const navigation = useNavigation();
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [restored, setRestored] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const messagesRef = useRef<ChatMessage[]>([]);
+  const idRef = useRef<string | null>(null);
+  const restoredRef = useRef(false);
+  /** Mensajes recién cargados del historial: no se vuelven a guardar (no cambian el orden por fecha). */
+  const loadedRef = useRef<ChatMessage[] | null>(null);
   const [picker, setPicker] = useState<{
     title: string;
     options: string[];
@@ -103,6 +125,56 @@ export default function ChatScreen() {
   useEffect(() => {
     loadUsage();
   }, [loadUsage]);
+
+  messagesRef.current = messages;
+  idRef.current = conversationId;
+  restoredRef.current = restored;
+
+  // Al abrir el chat se retoma la última conversación.
+  useEffect(() => {
+    (async () => {
+      try {
+        const id = await getActiveConversationId();
+        if (id) {
+          const loaded = await loadConversation(id);
+          if (loaded.length) {
+            loadedRef.current = loaded;
+            setMessages(loaded);
+            setConversationId(id);
+          } else {
+            await setActiveConversationId(null);
+          }
+        }
+      } finally {
+        setRestored(true);
+      }
+    })();
+  }, []);
+
+  // Guarda con una pequeña espera para no escribir en cada tecla de la respuesta.
+  useEffect(() => {
+    if (!restored || messages.length === 0) return;
+    if (messages === loadedRef.current) return;
+    if (!conversationId) {
+      const id = newConversationId();
+      setConversationId(id);
+      void setActiveConversationId(id);
+      return;
+    }
+    const timer = setTimeout(() => void saveConversation(conversationId, messages), 400);
+    return () => clearTimeout(timer);
+  }, [messages, conversationId, restored]);
+
+  // Si la app pasa a segundo plano se guarda de inmediato.
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      const id = idRef.current;
+      if (state !== "active" && id && messagesRef.current !== loadedRef.current) {
+        void saveConversation(id, messagesRef.current);
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   function pushAssistant(content: string, prefix = "assistant") {
     setMessages((prev) => [
@@ -141,6 +213,7 @@ export default function ChatScreen() {
   async function sendText(raw: string, opts: { viaVoice?: boolean; clearInput?: boolean } = {}) {
     const trimmed = raw.trim();
     if (!trimmed) return;
+    if (!restoredRef.current) return;
     if (sending || blockedRef.current) {
       // Hay otra respuesta en curso o no quedan mensajes: lo dictado no se pierde, queda en la caja.
       if (opts.viaVoice) setInput(trimmed);
@@ -215,6 +288,98 @@ export default function ChatScreen() {
     if (sending) return;
     sendText(input, { clearInput: true });
   }
+
+  // --- Historial: nuevo chat / abrir / borrar ---------------------------------
+  /** Guarda lo pendiente antes de cambiar de conversación. */
+  async function flushCurrent() {
+    const id = idRef.current;
+    if (id && messagesRef.current.length && messagesRef.current !== loadedRef.current) {
+      await saveConversation(id, messagesRef.current);
+    }
+  }
+
+  /** No se cambia de conversación con una respuesta en curso o dictando. */
+  function busyForSwitch(): boolean {
+    if (!restoredRef.current) return true;
+    if (sending || voice.listening) {
+      showNotice("Espera a que termine la respuesta para cambiar de conversación.");
+      return true;
+    }
+    return false;
+  }
+
+  async function startNewConversation() {
+    if (busyForSwitch()) return;
+    if (messagesRef.current.length === 0) return;
+    await flushCurrent();
+    loadedRef.current = null;
+    setMessages([]);
+    setConversationId(null);
+    setInput("");
+    await setActiveConversationId(null);
+  }
+
+  async function openConversation(id: string) {
+    if (busyForSwitch()) return;
+    if (id === idRef.current) {
+      setHistoryOpen(false);
+      return;
+    }
+    await flushCurrent();
+    const loaded = await loadConversation(id);
+    if (loaded.length === 0) {
+      await deleteConversation(id);
+      showNotice("Esa conversación ya no está disponible.");
+      return;
+    }
+    loadedRef.current = loaded;
+    setMessages(loaded);
+    setConversationId(id);
+    setInput("");
+    await setActiveConversationId(id);
+    setHistoryOpen(false);
+  }
+
+  function handleDeleted(id: string | "all") {
+    if (id === "all" || id === idRef.current) {
+      loadedRef.current = null;
+      setMessages([]);
+      setConversationId(null);
+    }
+  }
+
+  function openHistory() {
+    if (busyForSwitch()) return;
+    void flushCurrent().then(() => setHistoryOpen(true));
+  }
+
+  // Botones del encabezado (el efecto se registra una vez; llama siempre a la versión vigente).
+  const headerActions = useRef({ openHistory, startNewConversation });
+  headerActions.current = { openHistory, startNewConversation };
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <View style={styles.headerActions}>
+          <Pressable
+            onPress={() => headerActions.current.openHistory()}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Historial de conversaciones"
+          >
+            <Text style={styles.headerButton}>Historial</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => void headerActions.current.startNewConversation()}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Nueva conversación"
+          >
+            <Text style={styles.headerButton}>Nuevo</Text>
+          </Pressable>
+        </View>
+      ),
+    });
+  }, [navigation]);
 
   // --- Dictado por voz: mantener presionado el micrófono ------------------------
   const voice = useVoiceInput({
@@ -387,6 +552,13 @@ export default function ChatScreen() {
           <Text style={styles.sendButtonText}>Enviar</Text>
         </Pressable>
       </View>
+      <ConversationHistory
+        visible={historyOpen}
+        activeId={conversationId}
+        onOpen={(id) => void openConversation(id)}
+        onDeleted={handleDeleted}
+        onClose={() => setHistoryOpen(false)}
+      />
       <OptionPicker
         visible={picker !== null}
         title={picker?.title ?? ""}
@@ -400,6 +572,8 @@ export default function ChatScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#0F172A" },
+  headerActions: { flexDirection: "row", gap: 16, marginRight: 14 },
+  headerButton: { color: "#38BDF8", fontWeight: "700", fontSize: 14 },
   listContent: { padding: 16, gap: 8 },
   empty: { color: "#64748B", textAlign: "center", marginTop: 40 },
   emptySecondary: { color: "#475569", textAlign: "center", marginTop: 8, fontSize: 13 },

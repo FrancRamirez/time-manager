@@ -4,6 +4,7 @@ import {
 } from "@react-native-google-signin/google-signin";
 import { apiFetch } from "@/api/client";
 import { saveTokens, clearTokens } from "./secureStorage";
+import { clearConversations } from "./conversations";
 import type { User } from "@/types";
 
 const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
@@ -72,6 +73,8 @@ export async function signOut() {
     // no bloquear el logout local si falla el remoto
   }
   await clearTokens();
+  // El historial del asistente puede contener datos de correos y agenda: no queda en el teléfono.
+  await clearConversations().catch(() => {});
 }
 
 export function isSignInCancelled(error: unknown) {
