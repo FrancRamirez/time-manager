@@ -26,13 +26,15 @@
         "com.android.alarm.permission.SET_ALARM"
       ],
       "blockedPermissions": [
-        "android.permission.WRITE_CONTACTS"
+        "android.permission.WRITE_CONTACTS",
+        "android.permission.ACCESS_FINE_LOCATION"
       ],
       "googleServicesFile": "./google-services.json"
     },
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      "expo-location",
       [
         "expo-notifications",
         {
@@ -44,7 +46,7 @@
       [
         "expo-contacts",
         {
-          "contactsPermission": "Permite que Time Manager busque en tus contactos el número de la persona a quien quieres escribir por WhatsApp. Los contactos no salen de tu teléfono."
+          "contactsPermission": "Permite que Time Manager busque en tus contactos el número de la persona a quien quieres escribir o llamar (WhatsApp, SMS o marcador). Los contactos no salen de tu teléfono."
         }
       ],
       [

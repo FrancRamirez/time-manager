@@ -1,6 +1,7 @@
 import { Alert } from "react-native";
 import * as clock from "@/services/clock";
 import { composeWhatsapp, type ChooseOption } from "@/services/whatsapp";
+import { composeCall, composeSms } from "@/services/phoneActions";
 import { activeAlarms, newAlarmId, nextFireAt, useAlarmStore } from "@/store/alarmStore";
 import type { DeviceAction } from "@/api/gemini";
 import { appAllows, restrictedMessage } from "@/constants/apps";
@@ -30,7 +31,14 @@ function failure(what: string, error?: string): DeviceActionResult {
  * revisa lo mismo antes de abrir el Reloj o WhatsApp (los ajustes pudieron cambiar después).
  */
 function restrictionFor(action: DeviceAction): DeviceActionResult | null {
-  const app: AppId = action.kind === "whatsapp_send" ? "whatsapp" : "clock";
+  const app: AppId =
+    action.kind === "whatsapp_send"
+      ? "whatsapp"
+      : action.kind === "sms_send"
+        ? "sms"
+        : action.kind === "call_dial"
+          ? "calls"
+          : "clock";
   const access = useSettingsStore.getState().settings.appAccess;
   return appAllows(access, app, true)
     ? null
@@ -106,11 +114,30 @@ export async function executeDeviceAction(
     case "whatsapp_send":
       return composeWhatsapp(action, ui.chooseOption);
 
+    case "sms_send":
+      return composeSms(action, ui.chooseOption);
+
+    case "call_dial":
+      return composeCall(action, ui.chooseOption);
+
     case "timer_set": {
       const res = await clock.setTimer(action);
       if (!res.ok) return failure("iniciar el temporizador", res.error);
       return { ok: true, message: "Listo, el temporizador está en marcha." };
     }
+  }
+}
+
+function confirmTexts(action: DeviceAction): { title: string; button: string } {
+  switch (action.kind) {
+    case "whatsapp_send":
+      return { title: "Preparar mensaje de WhatsApp", button: "Abrir WhatsApp" };
+    case "sms_send":
+      return { title: "Preparar SMS", button: "Abrir mensajes" };
+    case "call_dial":
+      return { title: "Preparar llamada", button: "Abrir marcador" };
+    default:
+      return { title: "Confirmar acción", button: "Confirmar" };
   }
 }
 
@@ -136,13 +163,13 @@ export function handleDeviceAction(
     void run();
     return;
   }
-  const isWhatsapp = action.kind === "whatsapp_send";
+  const { title, button } = confirmTexts(action);
   Alert.alert(
-    isWhatsapp ? "Preparar mensaje de WhatsApp" : "Confirmar acción",
+    title,
     action.description,
     [
       { text: "Cancelar", style: "cancel", onPress: () => report({ ok: true, message: "Entendido, no hice cambios." }) },
-      { text: isWhatsapp ? "Abrir WhatsApp" : "Confirmar", onPress: () => void run() },
+      { text: button, onPress: () => void run() },
     ],
     { cancelable: false }
   );

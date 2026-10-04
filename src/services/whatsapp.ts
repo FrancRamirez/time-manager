@@ -1,5 +1,5 @@
 import { Linking } from "react-native";
-import * as Contacts from "expo-contacts";
+import { lookupContact, type ChooseOption } from "@/services/contacts";
 import { toInternational } from "@/services/phone";
 
 /**
@@ -8,7 +8,7 @@ import { toInternational } from "@/services/phone";
  * decide si pulsa Enviar. Los contactos se consultan solo en el teléfono.
  */
 
-export type ChooseOption = (title: string, options: string[]) => Promise<number | null>;
+export type { ChooseOption };
 
 export interface WhatsappRequest {
   contactName?: string;
@@ -23,43 +23,6 @@ export interface WhatsappResult {
 }
 
 const MAX_OPTIONS = 8;
-
-interface Candidate {
-  label: string;
-  digits: string;
-}
-
-type Lookup =
-  | { status: "found"; candidates: Candidate[] }
-  | { status: "denied" | "none" | "no_international" };
-
-async function lookupContact(name: string): Promise<Lookup> {
-  const perm = await Contacts.requestPermissionsAsync();
-  if (!perm.granted) return { status: "denied" };
-
-  const { data } = await Contacts.getContactsAsync({
-    name,
-    fields: [Contacts.Fields.PhoneNumbers],
-    pageSize: 25,
-  });
-  const withPhones = data.filter((c) => c.phoneNumbers?.length);
-  if (withPhones.length === 0) return { status: "none" };
-
-  const seen = new Set<string>();
-  const candidates: Candidate[] = [];
-  for (const c of withPhones) {
-    for (const p of c.phoneNumbers ?? []) {
-      const digits = toInternational(p.number ?? p.digits);
-      if (!digits || seen.has(digits)) continue;
-      seen.add(digits);
-      candidates.push({
-        digits,
-        label: `${c.name} · ${p.number ?? `+${digits}`}${p.label ? ` (${p.label})` : ""}`,
-      });
-    }
-  }
-  return candidates.length ? { status: "found", candidates } : { status: "no_international" };
-}
 
 async function openWhatsapp(digits: string | undefined, message: string): Promise<boolean> {
   const text = encodeURIComponent(message);
@@ -89,9 +52,9 @@ export async function composeWhatsapp(
   let fallbackReason: string | null = null;
 
   if (!digits && req.contactName) {
-    let lookup: Lookup;
+    let lookup: Awaited<ReturnType<typeof lookupContact>>;
     try {
-      lookup = await lookupContact(req.contactName);
+      lookup = await lookupContact(req.contactName, toInternational);
     } catch (err) {
       console.warn("[whatsapp] contactos:", err);
       lookup = { status: "denied" };
@@ -99,7 +62,7 @@ export async function composeWhatsapp(
 
     if (lookup.status === "found") {
       if (lookup.candidates.length === 1) {
-        digits = lookup.candidates[0].digits;
+        digits = lookup.candidates[0].value;
       } else {
         const shown = lookup.candidates.slice(0, MAX_OPTIONS);
         const index = await chooseOption(
@@ -107,7 +70,7 @@ export async function composeWhatsapp(
           shown.map((c) => c.label)
         );
         if (index === null) return { ok: true, message: "Entendido, no abrí WhatsApp." };
-        digits = shown[index].digits;
+        digits = shown[index].value;
       }
     } else if (lookup.status === "denied") {
       fallbackReason = "No tengo permiso para ver tus contactos";

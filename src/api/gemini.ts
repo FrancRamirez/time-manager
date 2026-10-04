@@ -19,6 +19,8 @@ export type DeviceAction = (
   | { kind: "alarm_update"; alarmId: string; old: AlarmFields; new: AlarmFields }
   | { kind: "timer_set"; seconds: number; label?: string }
   | { kind: "whatsapp_send"; contactName?: string; phone?: string; message: string }
+  | { kind: "sms_send"; contactName?: string; phone?: string; message: string }
+  | { kind: "call_dial"; contactName?: string; phone?: string }
 ) & {
   description: string;
   /** true: pedir confirmación antes de ejecutar. false: ejecutar de inmediato. */
@@ -47,6 +49,8 @@ interface SendMessageResponse {
   /** Acción aplicada de inmediato (modo Piloto Automático). */
   executedAction?: { type: PendingAction["type"]; description: string };
   deviceAction?: DeviceAction;
+  /** true: el asistente necesita la ubicación para el clima; la app la obtiene y reenvía el mensaje. */
+  locationRequest?: boolean;
   /** Cupo diario de mensajes tras este envío (no viene si el servidor no lo puede calcular). */
   usage?: AiUsage;
 }
@@ -64,7 +68,13 @@ const MAX_HISTORY = 10;
 export function sendChatMessage(
   message: string,
   history: ChatMessage[] = [],
-  options: { viaVoice?: boolean } = {}
+  options: {
+    viaVoice?: boolean;
+    /** Ubicación aproximada (redondeada); solo se manda al reenviar un mensaje de clima. */
+    location?: { lat: number; lon: number };
+    /** La app intentó obtener la ubicación y no pudo (permiso denegado o ubicación apagada). */
+    locationUnavailable?: boolean;
+  } = {}
 ) {
   return apiFetch<SendMessageResponse>("/api/ai/chat", {
     method: "POST",
@@ -78,6 +88,8 @@ export function sendChatMessage(
       settings: assistantSettings(),
       viaVoice: options.viaVoice === true,
       alarms: registeredAlarms(),
+      ...(options.location ? { location: options.location } : {}),
+      ...(options.locationUnavailable ? { locationUnavailable: true } : {}),
     },
   });
 }

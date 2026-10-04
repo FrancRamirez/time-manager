@@ -53,6 +53,34 @@ export const RESTRICTABLE_APPS: RestrictableApp[] = [
       blocked: "Frami no prepara mensajes de WhatsApp.",
     },
   },
+  {
+    id: "sms",
+    name: "SMS",
+    levels: ["allowed", "blocked"],
+    explain: {
+      allowed: "Frami prepara SMS y abre tu app de mensajes para que tú los envíes. No lee tus mensajes.",
+      blocked: "Frami no prepara SMS.",
+    },
+  },
+  {
+    id: "calls",
+    name: "Llamadas",
+    levels: ["allowed", "blocked"],
+    explain: {
+      allowed: "Frami abre el marcador con el número listo y tú pulsas Llamar. No ve tu historial de llamadas.",
+      blocked: "Frami no abre el marcador.",
+    },
+  },
+  {
+    id: "forecast",
+    name: "Pronóstico",
+    levels: ["allowed", "blocked"],
+    explain: {
+      allowed:
+        "Frami consulta el clima. Usa tu ubicación aproximada solo en ese momento (te pide permiso la primera vez) o la ciudad que le digas.",
+      blocked: "Frami no consulta el clima ni usa tu ubicación.",
+    },
+  },
 ];
 
 export const LEVEL_LABELS: Record<AccessLevel, string> = {
@@ -67,6 +95,9 @@ export const DEFAULT_APP_ACCESS: AppAccess = {
   gmail: "allowed",
   clock: "allowed",
   whatsapp: "allowed",
+  sms: "allowed",
+  calls: "allowed",
+  forecast: "allowed",
 };
 
 export function appName(app: AppId): string {

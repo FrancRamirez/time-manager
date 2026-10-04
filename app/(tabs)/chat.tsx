@@ -16,6 +16,7 @@ import {
   AppState,
 } from "react-native";
 import { useNavigation } from "expo-router";
+import { getApproxLocation } from "@/services/location";
 import {
   sendChatMessage,
   confirmPendingAction,
@@ -232,11 +233,25 @@ export default function ChatScreen() {
     setSending(true);
 
     try {
-      const { reply, pendingAction, deviceAction, usage: newUsage } = await sendChatMessage(
-        trimmed,
-        history,
-        { viaVoice: opts.viaVoice }
-      );
+      let response = await sendChatMessage(trimmed, history, { viaVoice: opts.viaVoice });
+
+      if (response.locationRequest) {
+        // Pregunta de clima: se obtiene la ubicación aproximada (el permiso se pide la primera vez)
+        // y se reenvía el mismo mensaje. Sin ubicación, el asistente pregunta la ciudad.
+        showNotice("Usaré tu ubicación aproximada solo para consultar el clima.");
+        const place = await getApproxLocation();
+        response = await sendChatMessage(trimmed, history, {
+          viaVoice: opts.viaVoice,
+          ...(place.status === "ok"
+            ? { location: { lat: place.lat, lon: place.lon } }
+            : { locationUnavailable: true }),
+        });
+        if (response.locationRequest) {
+          throw new Error("El servidor volvió a pedir la ubicación");
+        }
+      }
+
+      const { reply, pendingAction, deviceAction, usage: newUsage } = response;
       setMessages((prev) => [...prev, reply]);
       if (newUsage) setUsage(toUsageState(newUsage));
 

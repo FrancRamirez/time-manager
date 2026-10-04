@@ -5,6 +5,8 @@ import {
   AUTHOR_CREDIT,
   AUTHOR_LINK_LABEL,
   AUTHOR_URL,
+  WEATHER_CREDIT,
+  WEATHER_URL,
 } from "@/constants/brand";
 import { AutonomySelector } from "@/components/AutonomySelector";
 import { BlockedHoursPicker } from "@/components/BlockedHoursPicker";
@@ -39,11 +41,11 @@ export default function SettingsScreen() {
     );
   }
 
-  async function openAuthorSite() {
+  async function openLink(url: string) {
     try {
-      await Linking.openURL(AUTHOR_URL);
+      await Linking.openURL(url);
     } catch {
-      Alert.alert("No se pudo abrir el enlace", `Puedes visitarlo en ${AUTHOR_URL}`);
+      Alert.alert("No se pudo abrir el enlace", `Puedes visitarlo en ${url}`);
     }
   }
 
@@ -142,8 +144,11 @@ export default function SettingsScreen() {
           {Constants.expoConfig?.version ? ` · v${Constants.expoConfig.version}` : ""}
         </Text>
         <Text style={styles.hint}>{AUTHOR_CREDIT}</Text>
-        <Pressable onPress={openAuthorSite} accessibilityRole="link" hitSlop={8}>
+        <Pressable onPress={() => openLink(AUTHOR_URL)} accessibilityRole="link" hitSlop={8}>
           <Text style={styles.link}>{AUTHOR_LINK_LABEL}</Text>
+        </Pressable>
+        <Pressable onPress={() => openLink(WEATHER_URL)} accessibilityRole="link" hitSlop={8}>
+          <Text style={styles.hint}>{WEATHER_CREDIT}</Text>
         </Pressable>
       </Section>
     </ScrollView>
